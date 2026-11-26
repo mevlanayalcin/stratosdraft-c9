@@ -1,0 +1,9 @@
+version: "1.0"
+linter: jetbrains/qodana-js:2025.2
+profile:
+  name: qodana.recommended
+exclude:
+  - name: All
+    paths:
+      - .wrangler
+      - node_modules

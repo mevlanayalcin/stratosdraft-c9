@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="StratosDraft Unit &amp; Monte Carlo Tests" type="NodeJSConfigurationType" path-to-js-file="tests/fearless_engine.test.mjs" working-dir="$PROJECT_DIR$">
+    <envs />
+    <node-parameters>--test</node-parameters>
+    <method v="2" />
+  </configuration>
+</component>

@@ -1,0 +1,15 @@
+{
+  "name": "stratosdraft",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-11-01",
+  "ai": {
+    "binding": "AI"
+  },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "none",
+    "not_found_handling": "none",
+    "run_worker_first": true
+  }
+}

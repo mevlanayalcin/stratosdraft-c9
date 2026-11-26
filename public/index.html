@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StratosDraft — Cloud9 × JetBrains Hard Fearless Draft War Room</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <div>
+        <div class="pill-row">
+          <span class="c9-pill">CLOUD9 × JETBRAINS · SKY'S THE LIMIT 2026</span>
+          <span class="grid-pill">POWERED BY GRID ESPORTS DATA SCHEMA</span>
+        </div>
+        <h1>StratosDraft <span class="accent">Fearless War Room</span></h1>
+        <p class="subtitle">Multi-game Hard Fearless Draft simulator, Bradley-Terry win-probability engine, Save-or-Burn Monte Carlo series optimizer, and automated GRID opponent scouting for League of Legends coaching staffs.</p>
+      </div>
+      <div class="series-controls">
+        <label>Blue Side<select id="blue-team-select"></select></label>
+        <label>Red Side<select id="red-team-select"></select></label>
+        <label>Format<select id="format-select"><option value="Bo5">Bo5 Hard Fearless</option><option value="Bo3">Bo3 Hard Fearless</option></select></label>
+        <button id="load-grid-btn" class="btn-cyan" type="button">Load GRID Bo5 (G3 · 20 Locked)</button>
+        <button id="reset-series-btn" class="btn-ghost" type="button">Reset Series</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container stack">
+    <section class="status-strip card">
+      <div class="metric-block">
+        <span class="label">SERIES STATE</span>
+        <strong id="series-score-text">Game 1 · Cloud9 0 – 0 FlyQuest</strong>
+        <span id="fearless-lock-count" class="muted">0 champions permanently Fearless-locked</span>
+      </div>
+      <div class="winprob-block">
+        <div class="winprob-labels">
+          <span id="blue-wp-label" class="blue-text">Cloud9 Blue 52.0%</span>
+          <span id="step-indicator" class="step-pill">Step 1/20 · B1 Ban</span>
+          <span id="red-wp-label" class="red-text">48.0% Red FlyQuest</span>
+        </div>
+        <div class="winprob-bar"><div id="blue-wp-fill" class="blue-fill" style="width:52%"></div></div>
+        <div id="attribution-row" class="attribution-row"></div>
+      </div>
+      <div class="action-block">
+        <button id="auto-step-btn" class="btn-cyan" type="button">Apply Top AI Action</button>
+        <button id="undo-btn" class="btn-ghost" type="button">Undo</button>
+        <button id="advance-blue-btn" class="btn-emerald" type="button" hidden>Blue Wins → Next Game</button>
+        <button id="advance-red-btn" class="btn-rose" type="button" hidden>Red Wins → Next Game</button>
+      </div>
+    </section>
+
+    <nav class="tab-bar" role="tablist">
+      <button class="tab-btn active" data-tab="warroom" type="button">1. Draft War Room</button>
+      <button class="tab-btn" data-tab="montecarlo" type="button">2. Bo5 Monte Carlo &amp; Pool Pinch</button>
+      <button class="tab-btn" data-tab="scouting" type="button">3. Automated GRID Scouting Report</button>
+      <button class="tab-btn" data-tab="gridapi" type="button">4. Live GRID GraphQL &amp; Replay Import</button>
+    </nav>
+
+    <section id="tab-warroom" class="tab-panel active">
+      <div class="warroom-grid">
+        <aside class="side-col blue-col card">
+          <div class="side-head"><h2 id="blue-col-title">Blue · Cloud9</h2><span class="badge-blue">BLUE</span></div>
+          <div class="ban-strip" id="blue-bans"></div>
+          <div class="pick-list" id="blue-picks"></div>
+          <div class="comp-bars" id="blue-comp-bars"></div>
+        </aside>
+
+        <section class="center-col">
+          <div class="card rec-card">
+            <div class="section-head">
+              <div>
+                <h3>Save-or-Burn Fearless Recommendations</h3>
+                <p class="muted">Ranks legal picks/bans by immediate Game Win-Prob Delta (ΔP) + Bo5 Hard Fearless Series Equity (ΔEV).</p>
+              </div>
+              <span id="rec-context-pill" class="step-pill">B1 Ban</span>
+            </div>
+            <div id="recommendations-list" class="rec-list"></div>
+          </div>
+
+          <div class="card pool-card">
+            <div class="pool-toolbar">
+              <div id="role-filters" class="role-filters">
+                <button class="role-btn active" data-role="ALL" type="button">ALL</button>
+                <button class="role-btn" data-role="TOP" type="button">TOP</button>
+                <button class="role-btn" data-role="JGL" type="button">JGL</button>
+                <button class="role-btn" data-role="MID" type="button">MID</button>
+                <button class="role-btn" data-role="BOT" type="button">BOT</button>
+                <button class="role-btn" data-role="SUP" type="button">SUP</button>
+              </div>
+              <input id="champ-search" type="search" placeholder="Search 48 pro champions…">
+            </div>
+            <div id="champ-grid" class="champ-grid"></div>
+          </div>
+        </section>
+
+        <aside class="side-col red-col card">
+          <div class="side-head"><h2 id="red-col-title">Red · FlyQuest</h2><span class="badge-red">RED</span></div>
+          <div class="ban-strip" id="red-bans"></div>
+          <div class="pick-list" id="red-picks"></div>
+          <div class="comp-bars" id="red-comp-bars"></div>
+        </aside>
+      </div>
+
+      <div class="card notes-coach-grid">
+        <div>
+          <h3>Active Synergy &amp; Counter Signals</h3>
+          <div id="signals-list" class="signals-list"></div>
+        </div>
+        <div>
+          <h3>Live AI Assistant Coach (Grounded in Draft + GRID Telemetry)</h3>
+          <form id="coach-form" class="coach-form">
+            <input id="coach-input" type="text" placeholder="Ask e.g. Should Cloud9 burn Rumble B1 or pinch FlyQuest's mid/jungle pool?">
+            <button id="coach-send-btn" class="btn-cyan" type="submit">Ask Coach</button>
+          </form>
+          <div id="coach-output" class="coach-output">Ask a tactical draft question — grounded in live Bradley-Terry win probabilities, Hard Fearless pool depletion, and GRID macro telemetry.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-montecarlo" class="tab-panel">
+      <div class="two-col">
+        <div class="card">
+          <h2>1,000-Trial Hard Fearless Series Monte Carlo</h2>
+          <p class="muted">Deterministic-seed series simulation integrating live game win probability + late-series comfort-pool depletion across Games 1–5.</p>
+          <div id="mc-summary" class="mc-grid"></div>
+          <svg id="mc-chart" viewBox="0 0 540 200" class="mc-svg"></svg>
+        </div>
+        <div class="card">
+          <h2>Hard Fearless Role Pool Depletion &amp; Pinch Alerts</h2>
+          <p class="muted">Real-time count of remaining comfort champions per role after prior-game Fearless lockouts and current bans/picks.</p>
+          <div id="pinch-alerts" class="pinch-alerts"></div>
+          <div id="pool-matrix" class="pool-matrix"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Completed Series Games &amp; Permanently Locked Fearless Champions</h3>
+        <div id="fearless-history" class="history-list"></div>
+      </div>
+    </section>
+
+    <section id="tab-scouting" class="tab-panel">
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <h2>Automated Opponent Scouting Briefing</h2>
+            <p class="muted">Synthesized deterministically from GRID team telemetry, side splits, Voidgrub/Dragon/Atakhan macro control, and Hard Fearless pinch targets.</p>
+          </div>
+          <button id="copy-scouting-btn" class="btn-cyan" type="button">Copy Markdown Briefing</button>
+        </div>
+        <div id="scouting-kpis" class="mc-grid"></div>
+        <pre id="scouting-markdown" class="markdown-box"></pre>
+      </div>
+    </section>
+
+    <section id="tab-gridapi" class="tab-panel">
+      <div class="two-col">
+        <div class="card">
+          <h2>Live GRID GraphQL Connector</h2>
+          <p class="muted">Connect directly to GRID Central Data (<code>api-op.grid.gg/central-data/graphql</code>) or Series State (<code>api-op.grid.gg/live-data-feed/series-state/graphql</code>) using your hackathon GRID API key.</p>
+          <form id="grid-api-form" class="grid-form">
+            <label>Endpoint
+              <select id="grid-endpoint">
+                <option value="central-data">GRID Central Data GraphQL</option>
+                <option value="series-state">GRID Series State GraphQL</option>
+              </select>
+            </label>
+            <label>GRID API Key (x-api-key, sent only to GRID via proxy)
+              <input id="grid-api-key" type="password" placeholder="Optional for live GRID calls">
+            </label>
+            <label>GraphQL Query
+              <textarea id="grid-query" rows="5">{ allSeries(first: 5, filter: { titleId: 3 }) { edges { node { id startTimeScheduled tournament { name } } } } }</textarea>
+            </label>
+            <button type="submit" class="btn-cyan">Execute GRID Query</button>
+          </form>
+          <pre id="grid-api-output" class="markdown-box"></pre>
+        </div>
+        <div class="card">
+          <h2>Import GRID Series-State JSON Replay</h2>
+          <p class="muted">Paste any official GRID <code>seriesState</code> JSON (or load the built-in Cloud9 vs FlyQuest Bo5 Game 1–2 replay) to hydrate all Hard Fearless lockouts instantly.</p>
+          <textarea id="grid-json-input" rows="11" class="json-area"></textarea>
+          <div class="action-row">
+            <button id="import-json-btn" class="btn-cyan" type="button">Hydrate Fearless War Room</button>
+            <button id="load-sample-json-btn" class="btn-ghost" type="button">Fill C9 vs FLY GRID Sample</button>
+          </div>
+          <p id="grid-import-status" class="muted"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer container">
+    <p>StratosDraft · Built for Cloud9 × JetBrains "Sky's The Limit" Hackathon 2026 (Category 2: LoL Macro Scouting &amp; Fearless Draft) · MIT Open Source · Not affiliated with or endorsed by Riot Games.</p>
+  </footer>
+</body>
+</html>
